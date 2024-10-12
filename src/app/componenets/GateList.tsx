@@ -1,15 +1,16 @@
 import { useDragStore } from "../store/drag";
 
 export function GateList() {
-  const {} = useDragStore();
+  const { setDragItem } = useDragStore();
   return (
     <div>
       <div
-        className="bg-red-600"
-        // onDragStart={(event) => onDragStart(event, "input")}
+        className="bg-slate-400 w-16 h-16 rounded-md text-5xl flex items-center justify-center"
+        onDragStart={(event) => setDragItem("input")}
+        onDragEnd={(event) => setDragItem(null)}
         draggable
       >
-        Input Node
+        X
       </div>
     </div>
   );

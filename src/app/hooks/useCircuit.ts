@@ -13,12 +13,13 @@ import QBitNode from "../componenets/QbitNode";
 import ExtenderNode from "../componenets/ExtenderNode";
 import ButtonNode from "../componenets/ButtonNode";
 import PreviewNode from "../componenets/PreviewNode";
+import { useDragStore } from "../store/drag";
 // Node type definitions for xyflow
 export const nodeTypes = {
   qbit: QBitNode,
   extender: ExtenderNode,
   button: ButtonNode,
-  preview: PreviewNode
+  preview: PreviewNode,
 };
 
 // Interfaces for quantum bits and circuit layers
@@ -42,8 +43,15 @@ export default function useCircuit() {
   const reactFlow = useReactFlow();
   const [qbits, setQbits] = useState<Qbit[]>([]);
   const [layers, setLayers] = useState<Layer[]>([]);
-  const [selectedQbitIndex, setSelectedQbitIndex] = useState<number | null>(null);
-  const [dragPosition, setDragPosition] = useState<{ x: number, y: number } | null>(null);
+  const [selectedQbitIndex, setSelectedQbitIndex] = useState<number | null>(
+    null
+  );
+
+  const { dragItem } = useDragStore();
+  const [dragPosition, setDragPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -78,7 +86,7 @@ export default function useCircuit() {
           break;
         case "qbit":
           setSelectedQbitIndex(node.data.index as number);
-          node.zIndex = 10
+          node.zIndex = 10;
           // set visible
           // additional logic if needed for qbit nodes
           break;
@@ -88,38 +96,51 @@ export default function useCircuit() {
     },
     [addQbit, addLayer, setSelectedQbitIndex]
   );
-  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    console.log(event);
-    const position = reactFlow.screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+  const onDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      if (dragItem) {
+        event.dataTransfer.dropEffect = "move";
 
-    setDragPosition(position);
-  }, []);
+        const position = reactFlow.screenToFlowPosition(
+          {
+            x: event.clientX,
+            y: event.clientY,
+          },
+          { snapToGrid: false }
+        );
 
-  const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
+        console.log(position, event.clientX);
+        setDragPosition(position);
+      } else {
+        event.dataTransfer.dropEffect = "none";
+      }
+    },
+    [dragItem, reactFlow]
+  );
 
-    const position = reactFlow.screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+  const onDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
 
-    const newNode: Node = {
-      id: 'gate',
-      type: 'preview',
-      position,
-      data: {},
-      draggable: false
-    };
-    setDragPosition(null);
-    setNodes((nds) => nds.concat(newNode));
-    return
+      const position = reactFlow.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
-  }, [reactFlow.screenToFlowPosition, setNodes, nodes]);
+      const newNode: Node = {
+        id: "gate",
+        type: "preview",
+        position,
+        data: {},
+        draggable: false,
+      };
+      setDragPosition(null);
+      setNodes((nds) => nds.concat(newNode));
+      return;
+    },
+    [reactFlow.screenToFlowPosition, setNodes, nodes]
+  );
 
   // Function to create Qbit Node
   const createQbitNode = useCallback(
@@ -130,8 +151,12 @@ export default function useCircuit() {
         type: "qbit",
         position: { x: 0, y: index * 60 },
         draggable: false,
-        data: { ...qbit, index: index, modalVisible: index === selectedQbitIndex },
-      }
+        data: {
+          ...qbit,
+          index: index,
+          modalVisible: index === selectedQbitIndex,
+        },
+      };
     },
     [selectedQbitIndex]
   );
@@ -189,7 +214,7 @@ export default function useCircuit() {
   // Initialize nodes and edges based on qbits and layers
   useEffect(() => {
     const newNodes = qbits.map((qbit, i) => createQbitNode(qbit, i));
-    console.log('hi');
+    console.log("hi");
     setNodes([...newNodes, AddQbitNode, ExtenderNode]);
   }, [qbits, AddQbitNode, ExtenderNode, createQbitNode]);
 
