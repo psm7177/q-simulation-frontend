@@ -18,7 +18,6 @@ export const useDragStore = create<DragState>((set) => ({
     registerCallback: (callback: DragCallback) => set({ onDragCallback: callback }),
     putItem: (position: XYPosition) => {
         set((state) => {
-            console.log(state.dragItem, position);
             if (state.onDragCallback && state.dragItem) {
                 state.onDragCallback(state.dragItem, position)
             }

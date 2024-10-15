@@ -12,20 +12,27 @@ export default function Home() {
     onEdgesChange,
     onNodeClick,
     // onDrop,
+    onConnectStart,
+    onMouseMove,
+    onConnectEnd,
     onDragOver,
   } = useCircuit();
 
   return (
-    <div className="relative h-screen w-screen flex">
+    <div className="relative h-screen w-screen flex" >
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
-          onNodesChange={onNodesChange}
           edges={edges}
+          onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           onNodeClick={onNodeClick}
           onDragOver={onDragOver}
+          onMouseMove={onMouseMove}
+          // onMouseOver={onMouseOver}
+          onConnectStart={onConnectStart}
+          onConnectEnd={onConnectEnd}
           fitView
         >
           <Background />
