@@ -5,8 +5,15 @@ import useCircuit, { nodeTypes } from "./hooks/useCircuit";
 import { GateList } from "./componenets/GateList";
 
 export default function Home() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onNodeClick, onDrop,onDragOver  } =
-    useCircuit();
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onNodeClick,
+    // onDrop,
+    onDragOver,
+  } = useCircuit();
 
   return (
     <div className="relative h-screen w-screen flex">
@@ -18,7 +25,6 @@ export default function Home() {
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           onNodeClick={onNodeClick}
-          onDrop={onDrop}
           onDragOver={onDragOver}
           fitView
         >

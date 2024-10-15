@@ -8,18 +8,23 @@ import {
   Node,
   Edge,
   useReactFlow,
+  XYPosition,
 } from "@xyflow/react";
 import QBitNode from "../componenets/QbitNode";
 import ExtenderNode from "../componenets/ExtenderNode";
 import ButtonNode from "../componenets/ButtonNode";
 import PreviewNode from "../componenets/PreviewNode";
 import { useDragStore } from "../store/drag";
+import GateNode from "../componenets/GateNode";
+import { posix } from "path";
+
 // Node type definitions for xyflow
 export const nodeTypes = {
   qbit: QBitNode,
   extender: ExtenderNode,
   button: ButtonNode,
   preview: PreviewNode,
+  gate: GateNode
 };
 
 // Interfaces for quantum bits and circuit layers
@@ -47,7 +52,7 @@ export default function useCircuit() {
     null
   );
 
-  const { dragItem } = useDragStore();
+  const { dragItem, registerCallback } = useDragStore();
   const [dragPosition, setDragPosition] = useState<{
     x: number;
     y: number;
@@ -99,6 +104,7 @@ export default function useCircuit() {
   const onDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      event.stopPropagation()
       if (dragItem) {
         event.dataTransfer.dropEffect = "move";
 
@@ -109,8 +115,8 @@ export default function useCircuit() {
           },
           { snapToGrid: false }
         );
-
-        console.log(position, event.clientX);
+        position.x -= 16;
+        position.y -= 16;
         setDragPosition(position);
       } else {
         event.dataTransfer.dropEffect = "none";
@@ -120,24 +126,22 @@ export default function useCircuit() {
   );
 
   const onDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
-      const position = reactFlow.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+    (dragItem: string, position: XYPosition) => {
+      // const position = reactFlow.screenToFlowPosition({
+      //   x: screenPosition.x,
+      //   y: screenPosition.y,
+      // });
 
       const newNode: Node = {
-        id: "gate",
-        type: "preview",
+        id: "gate" + Date.now(),
+        type: "gate",
         position,
         data: {},
         draggable: false,
       };
+      console.log('put')
       setDragPosition(null);
       setNodes((nds) => nds.concat(newNode));
-      return;
     },
     [reactFlow.screenToFlowPosition, setNodes, nodes]
   );
@@ -232,6 +236,9 @@ export default function useCircuit() {
         data: {},
         draggable: false,
         hidden: dragPosition === null,
+        style: {
+          PointerEvent: "none"
+        }
       };
 
       return [...otherNodes, updatedPreviewNode];
@@ -242,6 +249,10 @@ export default function useCircuit() {
     const newEdges = qbits.map((_, i) => createEdge(i));
     setEdges([...newEdges]);
   }, [qbits, createEdge]);
+
+  useEffect(() => {
+    registerCallback(onDrop);
+  }, [onDrop]);
 
   // Initial qbit setup
   useEffect(() => {
@@ -257,7 +268,7 @@ export default function useCircuit() {
     onNodesChange,
     onEdgesChange,
     onNodeClick,
-    onDrop,
+    // onDrop,
     onDragOver,
   };
 }
