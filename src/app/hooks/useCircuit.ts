@@ -16,7 +16,6 @@ import ButtonNode from "../componenets/ButtonNode";
 import PreviewNode from "../componenets/PreviewNode";
 import { useDragStore } from "../store/drag";
 import GateNode from "../componenets/GateNode";
-import { posix } from "path";
 
 // Node type definitions for xyflow
 export const nodeTypes = {
@@ -24,7 +23,7 @@ export const nodeTypes = {
   extender: ExtenderNode,
   button: ButtonNode,
   preview: PreviewNode,
-  gate: GateNode
+  gate: GateNode,
 };
 
 // Interfaces for quantum bits and circuit layers
@@ -34,8 +33,10 @@ export interface Qbit {
 }
 
 interface Gate {
+  name: string;
   layer: Layer;
   register: number;
+  controlRegister: number | null;
 }
 
 interface Layer {
@@ -65,7 +66,7 @@ export default function useCircuit() {
   // Function to add a qbit
   const addQbit = useCallback(() => {
     setQbits((prevQbits) => [...prevQbits, { real: 0, imagin: 0 }]);
-  }, []);
+  }, [setQbits]);
 
   // Function to extend a circuit by adding a new layer
   const addLayer = useCallback(() => {
@@ -73,7 +74,53 @@ export default function useCircuit() {
       ...prevLayers,
       { gates: [], occupiedRegister: [] },
     ]);
-  }, []);
+  }, [setLayers]);
+
+  const addGate = useCallback(() => {}, [layers]);
+
+  const findNearestPlace = useCallback(
+    (position: XYPosition) => {
+      const snapDistance = 20; // 스냅핑 거리 설정
+      // find gate place
+      // gate가 없으면 해당 위치로 조정
+      // gate가 있으면 poition 변경
+      if (layers.length === 0) {
+        return position;
+      }
+
+      let nearestGatePosition = { x: 0, y: 0 };
+      let minDistance = Infinity;
+
+      layers.forEach((layer, layerIndex) => {
+        qbits.forEach((qbit, register) => {
+          if (layer.occupiedRegister.includes(register)) {
+            return;
+          }
+          const gatePosition = {
+            x: (layerIndex + 1) * 60, // 레이어의 x 위치
+            y: register * 60, // 레지스터에 따라 y 위치 조정
+          };
+
+          const distance = Math.sqrt(
+            Math.pow(gatePosition.x - position.x, 2) +
+              Math.pow(gatePosition.y - position.y, 2)
+          );
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestGatePosition = gatePosition;
+          }
+        });
+      });
+
+      if (minDistance <= snapDistance) {
+        return nearestGatePosition;
+      }
+
+      // 스냅핑 거리보다 멀리 있으면 원래의 위치 반환
+      return position;
+    },
+    [layers, qbits]
+  );
 
   // Node click handler
   const onNodeClick = useCallback(
@@ -104,7 +151,7 @@ export default function useCircuit() {
   const onDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      event.stopPropagation()
+      event.stopPropagation();
       if (dragItem) {
         event.dataTransfer.dropEffect = "move";
 
@@ -117,12 +164,13 @@ export default function useCircuit() {
         );
         position.x -= 16;
         position.y -= 16;
-        setDragPosition(position);
+        const placePosition = findNearestPlace(position);
+        setDragPosition(placePosition);
       } else {
         event.dataTransfer.dropEffect = "none";
       }
     },
-    [dragItem, reactFlow]
+    [dragItem, reactFlow, findNearestPlace]
   );
 
   const onDrop = useCallback(
@@ -131,19 +179,21 @@ export default function useCircuit() {
       //   x: screenPosition.x,
       //   y: screenPosition.y,
       // });
+      position.x -= 16;
+      position.y -= 16;
+      const placePosition = findNearestPlace(position);
 
       const newNode: Node = {
         id: "gate" + Date.now(),
         type: "gate",
-        position,
+        position: placePosition,
         data: {},
         draggable: false,
       };
-      console.log('put')
       setDragPosition(null);
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlow.screenToFlowPosition, setNodes, nodes]
+    [setNodes, findNearestPlace]
   );
 
   // Function to create Qbit Node
@@ -237,8 +287,8 @@ export default function useCircuit() {
         draggable: false,
         hidden: dragPosition === null,
         style: {
-          PointerEvent: "none"
-        }
+          PointerEvent: "none",
+        },
       };
 
       return [...otherNodes, updatedPreviewNode];
@@ -258,9 +308,10 @@ export default function useCircuit() {
   useEffect(() => {
     if (!init.current && qbits.length === 0) {
       addQbit();
+      addLayer();
       init.current = true;
     }
-  }, [qbits, addQbit]);
+  }, [qbits, addQbit, addLayer]);
 
   return {
     nodes,
