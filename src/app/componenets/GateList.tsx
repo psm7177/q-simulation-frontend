@@ -14,7 +14,7 @@ function GateItem({ name }: GateItemProps) {
       onDragStart={(event) => {
         const img = new Image();
         event.dataTransfer.setDragImage(img, 0, 0);
-        setDragItem("X");
+      setDragItem(name);
       }}
       onDragEnd={(event) => {
         const position = reactFlow.screenToFlowPosition(
